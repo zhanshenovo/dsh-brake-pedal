@@ -13,9 +13,15 @@ import vm from 'node:vm'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 let failures = 0
+let skipped = 0
 const check = (label, ok, detail) => {
   if (ok) console.log('  ok   ' + label)
   else { failures++; console.log('  FAIL ' + label + (detail === undefined ? '' : ' — ' + detail)) }
+}
+/** 这台机器缺数据 ≠ 代码错了：CI runner 上没有会话日志，相关断言应当跳过。 */
+const skip = (label, why) => {
+  skipped++
+  console.log('  skip ' + label + (why === undefined ? '' : ' — ' + why))
 }
 
 /* ---------- 1. host half ---------- */
@@ -187,24 +193,36 @@ try {
   const facts = answer.body
   check('facts is an object', facts !== null && typeof facts === 'object')
   check('facts declares a source', ['host', 'partial', 'none', 'error'].includes(facts?.source), String(facts?.source))
+  console.log('       payload: ' + JSON.stringify(facts))
+
+  // 下面三项读取的是**本机真实的会话日志**。CI runner 上一条都没有，
+  // 那不是代码错了，是这台机器没数据 —— 报"跳过"，不要报失败。
+  const machineHasSessions = facts?.source === 'host' || facts?.source === 'partial'
   if (facts?.source === 'host') {
     check('facts carries a real createdAt', typeof facts.createdAt === 'number')
     check('facts carries a real elapsedMs', typeof facts.elapsedMs === 'number' && facts.elapsedMs >= 0)
     check('facts carries real log bytes', typeof facts.logBytes === 'number' && facts.logBytes > 0)
+  } else {
+    skip('real session figures', '本机没有会话日志（CI 上属正常）')
   }
-  console.log('       payload: ' + JSON.stringify(facts))
 
   // 客户端会尽量带上自己的会话 id；宿主必须精确命中，而不是又去猜最近会话。
-  if (typeof facts?.sessionId === 'string' && facts.sessionId !== '') {
+  if (machineHasSessions && typeof facts?.sessionId === 'string' && facts.sessionId !== '') {
     const exact = await callRoute(routes[0].handler, '/dsh-brake-pedal/facts?session=' + encodeURIComponent(facts.sessionId))
     check('exact session id is honoured', exact.body?.matched === 'exact' && exact.body?.sessionId === facts.sessionId,
       JSON.stringify(exact.body))
+  } else {
+    skip('exact session id is honoured', '没有可比对的会话')
   }
 
   // 客户端报来一个不存在的 id 时，宁可退化成"最近写入的会话"并标注，也不要不出数。
-  const unknown = await callRoute(routes[0].handler, '/dsh-brake-pedal/facts?session=session-00000000-0000-0000-0000-000000000000')
-  check('unknown session id degrades to latest instead of failing',
-    unknown.body?.source !== 'none' && unknown.body?.matched === 'latest', JSON.stringify(unknown.body))
+  if (machineHasSessions) {
+    const unknown = await callRoute(routes[0].handler, '/dsh-brake-pedal/facts?session=session-00000000-0000-0000-0000-000000000000')
+    check('unknown session id degrades to latest instead of failing',
+      unknown.body?.source !== 'none' && unknown.body?.matched === 'latest', JSON.stringify(unknown.body))
+  } else {
+    skip('unknown session id degrades to latest', '没有最近会话可退化到')
+  }
 
   const rejected = await callRoute(routes[0].handler, '/dsh-brake-pedal/facts', 'POST')
   check('write methods are refused with 405', rejected.status === 405, String(rejected.status))
@@ -242,5 +260,7 @@ try {
   check('recording lock', false, error.message)
 }
 
-console.log(failures === 0 ? '\nsmoke: PASS' : `\nsmoke: ${failures} FAILED`)
+console.log(failures === 0
+  ? `\nsmoke: PASS${skipped > 0 ? `（跳过 ${skipped} 项：本机缺少真实会话日志）` : ''}`
+  : `\nsmoke: ${failures} FAILED${skipped > 0 ? `（另有 ${skipped} 项跳过）` : ''}`)
 process.exit(failures === 0 ? 0 : 1)

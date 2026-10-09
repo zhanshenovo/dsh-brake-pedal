@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # 核心：把插件当宿主那样加载一遍，再在真实/空会话存储上跑路由契约。
+  # runner 上没有 ~/.dsh，所以会话相关的三项会走"跳过"分支 —— 这正是
+  # 干净机器上的行为，顺带验证了它在没数据时不会误报失败。
+  smoke:
+    name: smoke (node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22, 24]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Run self-check
+        run: node test/smoke.mjs
+
+  # 自检没覆盖到的部分：视频工具链的语法、以及 Python 脚本能不能编译。
+  static:
+    name: static checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Syntax-check the video toolchain
+        run: |
+          node --check tools/video/render.mjs
+          node --check tools/video/timeline.mjs
+          node --check tools/install.mjs
+          node --check tools/uninstall.mjs
+      - name: Byte-compile the Python helpers
+        run: python -m py_compile tools/video/sfx.py tools/make-covers.py
+      - name: Assert the client bundle is a plain classic script
+        run: |
+          node -e "
+          const fs = require('fs');
+          const src = fs.readFileSync('client/client.js', 'utf8');
+          if (src.charCodeAt(0) === 0xFEFF) throw new Error('client bundle must not start with a BOM');
+          if (!/^window\.__ModuleLoader__\.load\(/.test(src)) throw new Error('unexpected bundle envelope');
+          new (require('vm').Script)(src);   // 与市场安装时的校验同一套
+          console.log('client bundle: classic script, envelope OK, ' + src.length + ' bytes');
+          "

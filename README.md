@@ -1,5 +1,9 @@
 # dsh-brake-pedal
 
+[![CI](https://github.com/zhanshenovo/dsh-brake-pedal/actions/workflows/ci.yml/badge.svg)](https://github.com/zhanshenovo/dsh-brake-pedal/actions/workflows/ci.yml)
+
+[English](README.en.md) | 中文
+
 制动踏板自检彩蛋。右下角多一颗 `🛞 制动自检`，点开就是一场 **6 脚全力制动测试**：
 支架**随机**断在第 2–6 脚，偶尔（约 1/8）压根不断，然后弹出一份虚构的《情况说明》。
 

@@ -32,5 +32,8 @@
     "easter-egg",
     "parody"
   ],
+  "engines": {
+    "node": ">=20"
+  },
   "license": "MIT"
 }
