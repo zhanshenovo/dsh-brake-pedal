@@ -68,13 +68,15 @@ BREAK_ODDS = [0.12, 0.26, 0.24, 0.16, 0.10, 0.12]
 ## 安装
 
 ```bash
+git clone https://github.com/zhanshenovo/dsh-brake-pedal.git
+cd dsh-brake-pedal
 node tools/install.mjs              # 装进 desktop profile
 node tools/install.mjs --profile web
 ```
 
 做三件事（和市场安装一致）：`dependencies` 加 `link:<本包>`、`dsh.profile.bundles`
 加包名、`node_modules` 建 junction。改 `package.json` 前备份成
-`package.json.bak-brake-pedal`。
+`package.json.bak-brake-pedal`。脚本按自身位置解析路径，所以克隆到哪都行。
 
 **然后必须重启 DeepSeek Harness**（插件页的「重启」按钮，或关掉再打开），再刷新页面。
 
