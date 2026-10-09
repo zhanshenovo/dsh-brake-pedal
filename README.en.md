@@ -120,12 +120,12 @@ first. The script resolves paths from its own location, so the clone can live an
 
 **③ A local tarball** (for when GitHub is unreachable)
 
-Download `dsh-brake-pedal-0.1.0.tgz` (21 KB, runtime files only) from
+Download `dsh-brake-pedal-0.2.0.tgz` (~23 KB, runtime files only) from
 [Releases](https://github.com/zhanshenovo/dsh-brake-pedal/releases) and put its
 **absolute path** into the same box:
 
 ```
-D:\Downloads\dsh-brake-pedal-0.1.0.tgz
+D:\Downloads\dsh-brake-pedal-0.2.0.tgz
 ```
 
 > Why ③ exists: the plugin market's own documentation states that its mirrors proxy

@@ -100,10 +100,10 @@ node tools/install.mjs --profile web
 **③ 本地 tarball（GitHub 连不上时用）**
 
 从 [Releases](https://github.com/zhanshenovo/dsh-brake-pedal/releases) 下载
-`dsh-brake-pedal-0.1.0.tgz`（21 KB，只有运行时文件），在「添加插件」里填它的**绝对路径**：
+`dsh-brake-pedal-0.2.0.tgz`（约 23 KB，只有运行时文件），在「添加插件」里填它的**绝对路径**：
 
 ```
-D:\Downloads\dsh-brake-pedal-0.1.0.tgz
+D:\Downloads\dsh-brake-pedal-0.2.0.tgz
 ```
 
 > 为什么需要第 ③ 条：插件市场的文档明确写了，镜像只代理 registry 包与依赖，
