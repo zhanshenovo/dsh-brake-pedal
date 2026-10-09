@@ -21,3 +21,6 @@ Thumbs.db
 *.bak-*
 __pycache__/
 *.pyc
+
+# npm pack / 发布时留在本地的 tarball
+*.tgz
