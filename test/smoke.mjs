@@ -136,6 +136,19 @@ try {
   // 返回 null，胶囊永远不出现。现在连续渲染两次必须给出同一个胶囊。
   const again = registrations[0].component({})
   check('survives React invoking it twice (StrictMode)', again !== null && JSON.stringify(again).includes('制动自检'))
+
+  // 胶囊要能拖：点击与拖动靠 pointer 事件区分，所以必须挂着 pointer 处理器，
+  // 而且不能再有 onClick（否则拖完松手会误开面板）。
+  const pill = registrations[0].component({})
+  const pillProps = pill?.props ?? {}
+  check('pill is draggable (pointer handlers wired)',
+    typeof pillProps.onPointerDown === 'function' &&
+    typeof pillProps.onPointerMove === 'function' &&
+    typeof pillProps.onPointerUp === 'function')
+  check('pill has no onClick (drag would open the panel by accident)',
+    pillProps.onClick === undefined)
+  check('pill can be reset by double click', typeof pillProps.onDoubleClick === 'function')
+  check('pill has a grab cursor', String(pillProps.style?.cursor) === 'grab', String(pillProps.style?.cursor))
 } catch (error) {
   check('renders a frame without throwing', false, error.message)
 }

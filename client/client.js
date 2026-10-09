@@ -54,6 +54,135 @@ window.__ModuleLoader__.load({ id: "dsh-brake-pedal", factory: (require) => {
 		return hint === "" ? ROUTE : ROUTE + "?session=" + encodeURIComponent(hint);
 	}
 
+	/* ---------- 胶囊的位置：默认贴在发送键正上方，也可以自己拖 ---------- */
+
+	const POS_KEY = "dsh-brake-pedal.pos";
+	/** 找不到发送键时的兜底位置（视口右下角）。 */
+	const FALLBACK_POS = { right: 16, bottom: 156 };
+	/** 拖动后落点与视口边缘的最小距离，免得被拖到看不见的地方。 */
+	const VIEWPORT_MARGIN = 8;
+	/** 位移小于这个像素数就当成点击，而不是拖动。 */
+	const DRAG_SLOP = 4;
+
+	function loadPos() {
+		try {
+			const raw = globalThis.localStorage.getItem(POS_KEY);
+			if (raw === null) return null;
+			const parsed = JSON.parse(raw);
+			if (parsed !== null && typeof parsed === "object" &&
+				typeof parsed.left === "number" && typeof parsed.top === "number") {
+				return { left: parsed.left, top: parsed.top };
+			}
+		} catch (error) {
+			// 坏数据、隐私模式、localStorage 被禁 —— 一律当没存过。
+		}
+		return null;
+	}
+
+	function savePos(pos) {
+		try {
+			globalThis.localStorage.setItem(POS_KEY, JSON.stringify(pos));
+		} catch (error) {
+			// 存不下就只是下次打开回到默认位置，不影响使用。
+		}
+	}
+
+	function clearPos() {
+		try {
+			globalThis.localStorage.removeItem(POS_KEY);
+		} catch (error) {
+			// 同上。
+		}
+	}
+
+	/**
+	 * 找发送/停止按钮。
+	 *
+	 * 定位用途，所以比 pressRealStop() 宽松：那个只认「停止」并且真的会按下去，
+	 * 这个认「发送」也认「停止」（同一个键会在两者之间切换），而且只量不点。
+	 *
+	 * 两道：先按可访问名字认；认不出来就退化成「编辑器容器里最靠右的那个可见按钮」
+	 * —— 发送键在输入框那一条的最右边，这是结构上的事实，不依赖语言和版本。
+	 * 两条都失败就返回 null，调用方落回视口右下角。
+	 */
+	function findComposerButton() {
+		try {
+			const label = (el) => (el.getAttribute("aria-label") || el.getAttribute("title") || el.textContent || "").trim();
+			const visible = (el) => {
+				if (el.disabled === true) return false;
+				if (el.getClientRects().length === 0) return false;
+				// 别把自己算进去：胶囊也是 role="button"，万一壳子把它挂进了同一个容器。
+				if (typeof el.closest === "function" && el.closest("[data-brake-pedal]") !== null) return false;
+				return true;
+			};
+			const named = (el) => /^(发送|停止|Send|Stop)$/i.test(label(el));
+
+			const editors = [];
+			const found = document.querySelectorAll("[contenteditable=\"true\"], textarea");
+			for (let i = 0; i < found.length; i++) {
+				if (found[i].getClientRects().length > 0) editors.push(found[i]);
+			}
+
+			for (let e = 0; e < editors.length; e++) {
+				const scopes = [];
+				let node = editors[e];
+				for (let up = 0; up < 5 && node !== null; up++) {
+					scopes.push(node);
+					node = node.parentElement;
+				}
+
+				// 第一道：名字对得上
+				for (let s = 0; s < scopes.length; s++) {
+					const buttons = scopes[s].querySelectorAll("button, [role=\"button\"]");
+					for (let i = 0; i < buttons.length; i++) {
+						if (visible(buttons[i]) && named(buttons[i])) return buttons[i];
+					}
+				}
+
+				// 第二道：最靠右的可见按钮（发送键在输入框那一条的最右边）
+				let rightmost = null;
+				let rightmostLeft = -Infinity;
+				for (let s = 0; s < scopes.length; s++) {
+					const buttons = scopes[s].querySelectorAll("button, [role=\"button\"]");
+					for (let i = 0; i < buttons.length; i++) {
+						const el = buttons[i];
+						if (!visible(el)) continue;
+						const left = el.getBoundingClientRect().left;
+						if (left > rightmostLeft) { rightmostLeft = left; rightmost = el; }
+					}
+				}
+				if (rightmost !== null) return rightmost;
+			}
+		} catch (error) {
+			// 读不到就退回视口右下角。
+		}
+		return null;
+	}
+
+	/** 发送键正上方居中；找不到就返回 null（调用方用 FALLBACK_POS）。 */
+	function anchorAboveComposer(size) {
+		const button = findComposerButton();
+		if (button === null) return null;
+		try {
+			const rect = button.getBoundingClientRect();
+			if (rect.width === 0 && rect.height === 0) return null;
+			const left = rect.left + rect.width / 2 - size.width / 2;
+			const top = rect.top - size.height - 10;
+			return clampToViewport({ left: left, top: top }, size);
+		} catch (error) {
+			return null;
+		}
+	}
+
+	function clampToViewport(pos, size) {
+		const maxLeft = Math.max(VIEWPORT_MARGIN, window.innerWidth - size.width - VIEWPORT_MARGIN);
+		const maxTop = Math.max(VIEWPORT_MARGIN, window.innerHeight - size.height - VIEWPORT_MARGIN);
+		return {
+			left: Math.min(Math.max(VIEWPORT_MARGIN, pos.left), maxLeft),
+			top: Math.min(Math.max(VIEWPORT_MARGIN, pos.top), maxTop),
+		};
+	}
+
 	/**
 	 * 断裂位置的分布：第 2–6 脚，外加一个"这次没裂"的可能。
 	 *
@@ -171,7 +300,9 @@ window.__ModuleLoader__.load({ id: "dsh-brake-pedal", factory: (require) => {
 			pill: {
 				position: "fixed", right: 16, bottom: 156, zIndex: 2147483000,
 				display: "flex", alignItems: "center", gap: "5px",
-				padding: "4px 10px", borderRadius: "999px", cursor: "pointer",
+				padding: "4px 10px", borderRadius: "999px", cursor: "grab",
+				// touchAction 不给 none 的话，触屏上按住胶囊会变成滚动页面而不是拖动
+				touchAction: "none",
 				font: "12px/1.4 system-ui, -apple-system, \"Segoe UI\", \"Microsoft YaHei\", sans-serif",
 				color: C.dim, background: C.bg2, border: "1px solid " + C.line,
 				opacity: 0.82, userSelect: "none", boxShadow: C.shadow,
@@ -386,12 +517,48 @@ window.__ModuleLoader__.load({ id: "dsh-brake-pedal", factory: (require) => {
 		/** 本会话第几次自检：决定重掷出来的断裂位置。 */
 		const attemptRef = react.useRef(0);
 
+		/** 操作者拖出来的位置；null = 没拖过，用默认锚点（发送键上方）。 */
+		const posState = react.useState(loadPos);
+		const pos = posState[0];
+		const setPos = posState[1];
+		const posRef = react.useRef(pos);
+		/** 默认锚点：发送键正上方。量不到就是 null，用 FALLBACK_POS。 */
+		const anchorState = react.useState(null);
+		const anchor = anchorState[0];
+		const setAnchor = anchorState[1];
+		const pillRef = react.useRef(null);
+		const dragRef = react.useRef(null);
+
 		const clearTimers = () => {
 			for (let i = 0; i < timers.current.length; i++) clearTimeout(timers.current[i]);
 			timers.current = [];
 		};
 
 		react.useEffect(() => clearTimers, []);
+
+		/**
+		 * 默认位置 = 发送键正上方。
+		 *
+		 * 发送键是壳子后来才挂上的（有时甚至比浮层晚很久），所以量几次而不是只量一次：
+		 * 挂载后 0 / 250 / 800 / 2000 ms 各量一次，窗口尺寸变化时也重量。
+		 * 全程量不到就什么都不做，胶囊留在 FALLBACK_POS（视口右下角）。
+		 */
+		react.useEffect(() => {
+			if (view.open || pos !== null) return undefined;
+			const place = () => {
+				const el = pillRef.current;
+				if (el === null) return;
+				const rect = el.getBoundingClientRect();
+				setAnchor(anchorAboveComposer({ width: rect.width, height: rect.height }));
+			};
+			place();
+			const retries = [250, 800, 2000].map((ms) => setTimeout(place, ms));
+			window.addEventListener("resize", place);
+			return () => {
+				for (let i = 0; i < retries.length; i++) clearTimeout(retries[i]);
+				window.removeEventListener("resize", place);
+			};
+		}, [view.open, pos === null]);
 
 		const loadFacts = () => {
 			try {
@@ -508,15 +675,88 @@ window.__ModuleLoader__.load({ id: "dsh-brake-pedal", factory: (require) => {
 
 		const h = react.createElement;
 
-		/* 收起状态：右下角那颗踏板。 */
+		const pillSize = () => {
+			const el = pillRef.current;
+			if (el === null) return { width: 0, height: 0 };
+			const rect = el.getBoundingClientRect();
+			return { width: rect.width, height: rect.height };
+		};
+
+		/**
+		 * 拖动。
+		 *
+		 * 点击与拖动都靠 pointer 事件区分：位移小于 DRAG_SLOP 才算点击。
+		 * 所以这里**没有 onClick** —— 指针按下的那一下已经决定了这是拖还是点，
+		 * 再加 onClick 会让"拖完之后松手"也弹面板。
+		 * 键盘走 onKeyDown，不受影响。
+		 */
+		const onPillPointerDown = (event) => {
+			if (typeof event.button === "number" && event.button !== 0) return;
+			const el = pillRef.current;
+			if (el === null) return;
+			const rect = el.getBoundingClientRect();
+			dragRef.current = {
+				offsetX: event.clientX - rect.left,
+				offsetY: event.clientY - rect.top,
+				startX: event.clientX,
+				startY: event.clientY,
+				moved: false,
+			};
+			try { el.setPointerCapture(event.pointerId); } catch (error) { /* 不支持指针捕获也能拖，只是出界会丢 */ }
+		};
+
+		const onPillPointerMove = (event) => {
+			const drag = dragRef.current;
+			if (drag === null) return;
+			if (!drag.moved &&
+				Math.abs(event.clientX - drag.startX) + Math.abs(event.clientY - drag.startY) < DRAG_SLOP) {
+				return;
+			}
+			drag.moved = true;
+			const next = clampToViewport(
+				{ left: event.clientX - drag.offsetX, top: event.clientY - drag.offsetY },
+				pillSize());
+			posRef.current = next;
+			setPos(next);
+		};
+
+		const onPillPointerUp = (event) => {
+			const drag = dragRef.current;
+			dragRef.current = null;
+			try {
+				if (pillRef.current !== null) pillRef.current.releasePointerCapture(event.pointerId);
+			} catch (error) { /* 没有捕获时释放会抛，忽略 */ }
+			if (drag === null) return;
+			if (drag.moved) { savePos(posRef.current); return; }
+			start(false);
+		};
+
+		/** 双击（或点面板里的「复位位置」）把胶囊放回发送键上方。 */
+		const resetPillPos = () => {
+			clearPos();
+			posRef.current = null;
+			setPos(null);
+		};
+
+		/* 收起状态：默认贴在发送键上方，可以拖，双击复位。 */
 		if (!view.open) {
+			const placed = pos !== null ? pos : anchor;
+			const style = placed === null
+				? S.pill
+				: Object.assign({}, S.pill, {
+					left: placed.left + "px", top: placed.top + "px", right: "auto", bottom: "auto",
+				});
 			return h("div", {
-				style: S.pill,
+				ref: pillRef,
+				style: style,
 				role: "button",
 				tabIndex: 0,
-				title: "制动系统自检（彩蛋：不拦任何停止动作）",
+				title: "制动系统自检（彩蛋：不拦任何停止动作）· 可拖动，双击复位",
 				"data-brake-pedal": "pill",
-				onClick: () => start(false),
+				onPointerDown: onPillPointerDown,
+				onPointerMove: onPillPointerMove,
+				onPointerUp: onPillPointerUp,
+				onDoubleClick: resetPillPos,
 				onKeyDown: (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); start(false); } },
 			}, h("span", { style: { fontSize: "13px" } }, PILL_GLYPH), h("span", null, "制动自检"));
 		}
@@ -630,6 +870,7 @@ window.__ModuleLoader__.load({ id: "dsh-brake-pedal", factory: (require) => {
 					h("span", { style: { flex: 1 } }),
 					h("button", { style: Object.assign({}, S.btn, S.btnPrimary), onClick: () => start(false) }, "再来一次（随机）"),
 					h("button", { style: S.btn, onClick: () => start(true) }, "未复现模式"),
+					h("button", { style: S.btn, onClick: resetPillPos }, "复位位置"),
 					h("button", { style: S.btn, onClick: close }, "收起")),
 				view.note === "" ? null : h("div", {
 					style: { padding: "9px 14px", borderTop: "1px solid " + C.line, fontSize: "11.5px", color: C.dim },

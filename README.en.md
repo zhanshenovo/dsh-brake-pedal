@@ -5,7 +5,7 @@
 English | [中文](README.md)
 
 A brake-pedal self-test easter egg for DeepSeek Harness. A small `🛞 制动自检` pill
-sits in the bottom-right corner; click it and the plugin runs a **six-stomp full-force
+sits beside the composer; click it and the plugin runs a **six-stomp full-force
 braking test** — the bracket snaps at a **random** stomp between #2 and #6, occasionally
 (~1 in 8) not at all, and then a fictional "official notice" pops up.
 
@@ -17,8 +17,14 @@ braking test** — the bracket snaps at a **random** stomp between #2 and #6, oc
 第 4 脚   1,750 N   ✕ 砰 —— 支架断裂   turn 2
 ────────────────────────────────────────────────────────────
 pedal force is derived ← session start / elapsed / log size · break point re-rolled each run
-                    [again (random)][not reproduced][collapse]
+        [again (random)][not reproduced][reset position][collapse]
 ```
+
+**Where the pill sits:** by default it anchors **just above the send button**. Press and
+drag it anywhere on screen and the position is remembered (`dsh-brake-pedal.pos` in
+`localStorage`); **double-click** it, or press **reset position** in the panel, to send it
+back above the send button. If no send button can be found (an empty session, say) it falls
+back to the bottom-right corner — and it can never be dragged off screen.
 
 > The in-app copy is Chinese-only for now. The layout above is what you get.
 
