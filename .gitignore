@@ -1,0 +1,21 @@
+# 依赖（这个插件没有任何运行时依赖，装了也是本地链路）
+node_modules/
+*.log
+
+# 逐帧渲染产物：可由 tools/video/render.mjs 重新生成，约 13 MB
+assets/video/frames/
+assets/video/edge-profile/
+
+# 音效中间件：由 tools/video/sfx.py 生成
+assets/video/sfx.wav
+
+# 无声版是中间产物，合成音效后的 *-sound.mp4 才是成片
+assets/video/demo-*.mp4
+!assets/video/demo-*-sound.mp4
+
+# 各种本地/编辑器垃圾
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.bak-*

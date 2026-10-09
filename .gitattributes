@@ -1,0 +1,9 @@
+# 文本统一按 LF 存储，检出时也不做转换（Windows 上 git 默认会改行尾，徒增噪音）
+* text=auto eol=lf
+
+# 二进制原样保存
+*.png binary
+*.mp4 binary
+
+# 字幕特意做成 UTF-8 BOM + CRLF（Windows 剪辑软件最不容易乱码），别让 git 规范化它
+*.srt -text

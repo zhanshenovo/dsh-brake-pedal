@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>dsh-brake-pedal · 演示场景</title>
+<style>
+  :root{
+    --bg1:#0d1015; --bg2:#1a1f28;
+    --card:#ffffff; --ink:#1f2329; --dim:#4e5969; --faint:#86909c; --line:#e5e6eb;
+    --good:#1a7f37; --bad:#cf222e; --brand:#3f5efb;
+    --mono:ui-monospace,"Cascadia Mono",Consolas,monospace;
+    --px:1;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:100%;height:100%;overflow:hidden;background:#0d1015}
+  body{font-family:"Microsoft YaHei","Segoe UI",system-ui,sans-serif;color:#eef1f6}
+  #stage{position:relative;width:100vw;height:100vh;overflow:hidden;
+         background:radial-gradient(120% 80% at 50% 0%,#1b2129 0%,var(--bg1) 62%)}
+
+  .layer{position:absolute;inset:0;display:none}
+  .layer.on{display:block}
+
+  /* ---------- 场景：标题 / 定版 ---------- */
+  .center{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;
+          gap:calc(22px * var(--px));padding:0 calc(72px * var(--px))}
+  .bar{width:calc(9px * var(--px));height:calc(96px * var(--px));background:var(--bad);
+       border-radius:calc(6px * var(--px))}
+  .h1{font-size:calc(92px * var(--px));font-weight:800;letter-spacing:calc(1px * var(--px));line-height:1.12}
+  .h2{font-size:calc(34px * var(--px));color:#9aa4b2;line-height:1.5}
+  .tagline{font-size:calc(28px * var(--px));color:#6b7482;line-height:1.7}
+  .brandmark{display:inline-block;font-size:calc(24px * var(--px));color:#cbd3dd;
+             border:calc(1px * var(--px)) solid #39424e;border-radius:999px;
+             padding:calc(6px * var(--px)) calc(18px * var(--px))}
+  .titleRow{display:flex;align-items:center;gap:calc(26px * var(--px))}
+
+  /* ---------- 场景：app 示意 ---------- */
+  .app{position:absolute;left:0;right:0;bottom:0;padding:calc(40px * var(--px))}
+  .composer{border:calc(1px * var(--px)) solid #2b333d;background:#141920;border-radius:calc(20px * var(--px));
+            padding:calc(22px * var(--px)) calc(26px * var(--px));display:flex;align-items:center;gap:calc(18px * var(--px))}
+  .spinner{width:calc(20px * var(--px));height:calc(20px * var(--px));border-radius:50%;flex:none;
+           border:calc(3px * var(--px)) solid #2b333d;border-top-color:var(--brand)}
+  .runline{font-size:calc(30px * var(--px));color:#9aa4b2}
+  .send{margin-left:auto;width:calc(56px * var(--px));height:calc(56px * var(--px));border-radius:50%;
+        background:var(--brand);flex:none}
+  .pillWrap{position:absolute;right:calc(40px * var(--px));bottom:calc(190px * var(--px));
+            display:flex;align-items:center;gap:calc(18px * var(--px))}
+  .pill{display:flex;align-items:center;gap:calc(10px * var(--px));
+        border:calc(2px * var(--px)) solid #4a5563;background:#1c2129;border-radius:999px;
+        padding:calc(10px * var(--px)) calc(22px * var(--px));font-size:calc(28px * var(--px));color:#cbd3dd;
+        box-shadow:0 calc(10px * var(--px)) calc(30px * var(--px)) rgba(0,0,0,.5)}
+  .pillGlow{position:absolute;inset:calc(-16px * var(--px));border-radius:999px;
+            border:calc(3px * var(--px)) solid rgba(240,83,63,.9);opacity:0}
+  .cap{font-size:calc(30px * var(--px));color:#9aa4b2;opacity:0}
+
+  /* ---------- 面板卡片 ---------- */
+  /* 卡片以自身中心定位。默认宽度 = 左右各留 56px，和原来的 left/right 写法等价，
+     所以竖版画面像素不变；横版再用 --cardw 收窄，免得 1800px 宽的卡片里
+     内容全挤在左边。
+     居中用 translate 属性而不是 transform —— transform 要留给弹窗的入场动画，
+     两者会叠加，而用 transform 居中会被入场动画覆盖掉。 */
+  .card{position:absolute;left:50%;top:50%;translate:-50% -50%;
+        width:var(--cardw,calc(100% - 112px * var(--px)));
+        background:var(--card);color:var(--ink);border-radius:calc(18px * var(--px));
+        box-shadow:0 calc(30px * var(--px)) calc(90px * var(--px)) rgba(0,0,0,.55);overflow:hidden}
+  .panel{}
+  .chead{display:flex;align-items:center;gap:calc(14px * var(--px));
+         padding:calc(26px * var(--px)) calc(30px * var(--px));border-bottom:calc(1px * var(--px)) solid var(--line);
+         font-size:calc(30px * var(--px));color:var(--dim)}
+  .dot{width:calc(15px * var(--px));height:calc(15px * var(--px));border-radius:50%;background:var(--good);flex:none}
+  .chead .t{color:var(--ink);font-weight:700}
+  .chead .r{margin-left:auto;font-variant-numeric:tabular-nums}
+  .rows{padding:calc(10px * var(--px)) calc(14px * var(--px)) calc(12px * var(--px))}
+  .row{display:grid;grid-template-columns:calc(150px * var(--px)) calc(230px * var(--px)) 1fr calc(200px * var(--px));
+       align-items:center;gap:calc(10px * var(--px));padding:calc(12px * var(--px)) calc(16px * var(--px));
+       border-radius:calc(10px * var(--px));font-size:calc(30px * var(--px));opacity:0;
+       transform:translateX(calc(-14px * var(--px)))}
+  .row .n{color:var(--faint)}
+  .row .f{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--ink)}
+  .row .s{color:var(--good);font-weight:600}
+  .row .s.bad{color:var(--bad);font-weight:800}
+  .row .m{color:var(--faint);font-size:calc(24px * var(--px));text-align:right}
+  .panel.flash{box-shadow:0 0 0 calc(6px * var(--px)) rgba(207,34,46,.55),0 calc(30px * var(--px)) calc(90px * var(--px)) rgba(0,0,0,.55)}
+
+  /* ---------- 弹窗 ---------- */
+  .back{position:absolute;inset:0;background:rgba(8,11,15,.55)}
+  .modal{}
+  .mhead{padding:calc(30px * var(--px)) calc(32px * var(--px)) calc(22px * var(--px));
+         border-bottom:calc(1px * var(--px)) solid var(--line)}
+  .eyebrow{display:flex;align-items:center;gap:calc(12px * var(--px));margin-bottom:calc(14px * var(--px))}
+  .eyebrow .k{font-size:calc(23px * var(--px));letter-spacing:calc(2px * var(--px));color:var(--bad)}
+  .eyebrow .badge{font-size:calc(21px * var(--px));color:var(--faint);
+                  border:calc(1px * var(--px)) solid var(--line);border-radius:999px;
+                  padding:calc(3px * var(--px)) calc(12px * var(--px))}
+  .mtitle{font-size:calc(36px * var(--px));font-weight:700;color:var(--ink);line-height:1.4}
+  .mbody{padding:calc(26px * var(--px)) calc(32px * var(--px));display:flex;flex-direction:column;gap:calc(20px * var(--px))}
+  .stat{display:grid;grid-template-columns:auto 1fr auto;gap:calc(12px * var(--px)) calc(20px * var(--px));
+        font-family:var(--mono);font-size:calc(26px * var(--px));background:#f5f6f8;
+        border:calc(1px * var(--px)) solid var(--line);border-radius:calc(12px * var(--px));
+        padding:calc(22px * var(--px)) calc(24px * var(--px))}
+  .stat .k{color:var(--faint)}
+  .stat .v{color:var(--ink);text-align:right;font-variant-numeric:tabular-nums}
+  .stat .v.bad{color:var(--bad)}
+  .p{font-size:calc(28px * var(--px));line-height:1.75;color:var(--dim)}
+  .p b{color:var(--ink)}
+  .note{font-size:calc(24px * var(--px));line-height:1.7;color:var(--faint);
+        border-top:calc(2px * var(--px)) dashed var(--line);padding-top:calc(18px * var(--px))}
+  .mfoot{display:flex;gap:calc(16px * var(--px));justify-content:flex-end;
+         padding:calc(24px * var(--px)) calc(32px * var(--px)) calc(32px * var(--px));
+         border-top:calc(1px * var(--px)) solid var(--line)}
+  .btn{border:calc(1px * var(--px)) solid var(--line);background:#f5f6f8;color:var(--ink);
+       border-radius:calc(12px * var(--px));padding:calc(14px * var(--px)) calc(28px * var(--px));
+       font-size:calc(28px * var(--px))}
+  .btn.danger{border-color:#ffc9c2;background:#fff1ef;color:#c0392b}
+  .hl{outline:calc(4px * var(--px)) solid rgba(240,83,63,.85);outline-offset:calc(6px * var(--px));
+      border-radius:calc(10px * var(--px))}
+
+  /* ---------- 大字幕 ---------- */
+  .bigline{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+           padding:0 calc(90px * var(--px))}
+  /* 大字幕必须是 flex 里的**一个** item：之前直接放文字节点和 <em>，它们各自变成
+     flex item 被排成两列，句子被拆成左右两块 —— 真实事故。 */
+  .bigInner{display:block;text-align:center;font-size:calc(62px * var(--px));font-weight:800;
+            line-height:1.5;letter-spacing:calc(1px * var(--px))}
+  .bigInner em{font-style:normal;color:var(--bad)}
+  .footline{position:absolute;left:0;right:0;bottom:calc(80px * var(--px));
+            text-align:center;font-size:calc(28px * var(--px));color:#6b7482;padding:0 calc(60px * var(--px))}
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- 标题 / 定版 -->
+  <section class="layer" id="s-title">
+    <div class="center">
+      <div class="titleRow"><div class="bar"></div><div class="h1">制动踏板自检</div></div>
+      <div class="h2">6 脚全力制动测试 · 断在第几脚是摇出来的</div>
+      <div class="tagline">纯表演 —— 它一根手指都没碰过真正的停止键</div>
+      <div style="margin-top:calc(24px * var(--px))"><span class="brandmark">DeepSeek Harness 插件 · 彩蛋</span></div>
+    </div>
+  </section>
+
+  <!-- app 示意 -->
+  <section class="layer" id="s-app">
+    <div class="app">
+      <div class="composer">
+        <span class="spinner"></span>
+        <span class="runline">正在执行：重构 order 模块（第 3 个子任务）…</span>
+        <span class="send"></span>
+      </div>
+    </div>
+    <div class="pillWrap">
+      <span class="cap" id="appCap">右下角这颗就是入口</span>
+      <span style="position:relative;display:inline-flex">
+        <span class="pillGlow" id="pillGlow"></span>
+        <span class="pill"><span>◉</span><span>制动自检</span></span>
+      </span>
+    </div>
+  </section>
+
+  <!-- 面板 -->
+  <section class="layer" id="s-panel">
+    <div class="card panel" id="panelCard">
+      <div class="chead">
+        <span class="dot" id="panelDot"></span>
+        <span class="t" id="panelTitle">制动系统自检 · 6 脚全力制动测试</span>
+        <span class="r">会话已运行 15m27s</span>
+      </div>
+      <div class="rows" id="panelRows"></div>
+    </div>
+  </section>
+
+  <!-- 弹窗 -->
+  <section class="layer" id="s-modal">
+    <div class="back" id="modalBack"></div>
+    <div class="card modal" id="modalCard">
+      <div class="mhead">
+        <div class="eyebrow">
+          <span class="k">关于本次运行制动踏板支架异常的情况说明</span>
+          <span class="badge" id="modalBadge">虚构段子</span>
+        </div>
+        <div class="mtitle" id="modalTitle">第 3 脚全力制动时，踏板支架发生结构分离</div>
+      </div>
+      <div class="mbody">
+        <div class="stat" id="modalStat"></div>
+        <div class="p">我们对任何与制动有关的反馈都保持最高级别的关注。本系统的验证遵循一套完整的内部流程，其边界由多轮试验共同划定，并覆盖多种非标准工况。</div>
+        <div class="p">需要说明的是：本次结果来自一次<b>极端且非标准</b>的连续制动工况，它不构成对日常使用表现的判断，也不构成任何安全结论。</div>
+        <div class="p">相关部件的设计复核、试验边界复查与质量追溯工作已经启动。</div>
+        <div class="note" id="modalNote">⚠ 本页是开发者自嘲性质的<b>虚构段子</b>：不指向任何真实企业、产品或事件，与任何厂商无关，也不构成任何安全评价。</div>
+        <div class="p" style="font-family:var(--mono);font-size:calc(23px * var(--px));color:var(--faint)">
+          数据源：会话 session-xxxxxxxx… · 踏板力为推导值</div>
+      </div>
+      <div class="mfoot">
+        <span class="btn" id="modalKeep">继续运行</span>
+        <span class="btn danger" id="modalStop">挂 P 挡（停止会话）</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 大字幕 -->
+  <section class="layer" id="s-big">
+    <div class="bigline" id="bigText"></div>
+  </section>
+
+  <!-- 定版 -->
+  <section class="layer" id="s-end">
+    <div class="center">
+      <div class="titleRow"><div class="bar"></div><div class="h1" style="font-size:calc(78px * var(--px))">dsh-brake-pedal</div></div>
+      <div class="h2">装进 profile，重启，右下角就多了一颗踏板</div>
+      <div class="tagline" style="font-family:var(--mono)">node tools/install.mjs</div>
+      <div class="tagline" style="margin-top:calc(18px * var(--px))">
+        虚构段子：不指向任何真实企业、产品或事件，也不构成任何安全评价。</div>
+    </div>
+  </section>
+
+</div>
+<script>
+// 横版要缩：同一套尺寸在 1080 高的画面里会溢出，所以允许外部用 ?px= 覆盖比例。
+// ?cardw= 再单独收窄卡片（横版用；竖版不传就保持全宽）。
+const PARAMS = new URLSearchParams(location.search);
+const PX = PARAMS.get('px');
+if (PX !== null) document.documentElement.style.setProperty('--px', PX);
+const CARDW = PARAMS.get('cardw');
+if (CARDW !== null) document.documentElement.style.setProperty('--cardw', CARDW + 'px');
+
+const FEET_DATA = [
+  { force: '1,641', note: '运行 15m27s' },
+  { force: '1,687', note: '日志 628 KB' },
+  { force: '1,733', note: '22:33 起' },
+  { force: '1,779', note: '轮次 2' },
+  { force: '1,825', note: '采样 46 次' },
+  { force: '1,871', note: '再测就该断了' }
+];
+
+const STAT_BROKEN = [
+  ['踏板力峰值', '1,733 N', true],
+  ['断裂脚次', '第 3 脚 / 共 6 脚', false],
+  ['断口形态', '高度一致', true],
+  ['制动距离', '约 38 m → 约 140 m', true],
+  ['会话已运行', '15m27s', false],
+  ['会话日志', '628 KB', false]
+];
+const STAT_CLEAN = [
+  ['踏板力峰值', '1,871 N', false],
+  ['断裂脚次', '无', false],
+  ['断口形态', '未复现', false],
+  ['结论', '本次未复现', false],
+  ['会话已运行', '15m27s', false],
+  ['建议', '继续开，别测了', false]
+];
+
+const $ = (id) => document.getElementById(id);
+const LAYERS = ['s-title', 's-app', 's-panel', 's-modal', 's-big', 's-end'];
+
+function showLayer(name) {
+  LAYERS.forEach((id) => { $(id).classList.toggle('on', id === name); });
+}
+
+function renderRows(feet, breakAt, clean, rowP) {
+  const box = $('panelRows');
+  const shown = Math.max(0, Math.floor(feet));
+  if (box.childElementCount !== shown) {
+    box.innerHTML = '';
+    for (let i = 0; i < shown; i++) {
+      const isBreak = !clean && breakAt === i + 1;
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML =
+        '<span class="n">第 ' + (i + 1) + ' 脚</span>' +
+        '<span class="f">' + FEET_DATA[i].force + ' N</span>' +
+        '<span class="s' + (isBreak ? ' bad' : '') + '">' +
+          (isBreak ? '✕ 砰 —— 支架断裂' : '✓ 踏板支架 完好') + '</span>' +
+        '<span class="m">' + FEET_DATA[i].note + '</span>';
+      if (isBreak) row.style.background = 'rgba(207,34,46,.07)';
+      box.appendChild(row);
+    }
+  }
+  // 最后一行的入场进度
+  const rows = box.children;
+  for (let i = 0; i < rows.length; i++) {
+    const isLast = i === rows.length - 1;
+    const p = isLast ? Math.min(1, Math.max(0, rowP)) : 1;
+    rows[i].style.opacity = String(p);
+    rows[i].style.transform = 'translateX(' + ((1 - p) * -14) + 'px)';
+  }
+}
+
+/** 单一入口：把某个状态画出来。t 由渲染器控制，页面自己不做动画。 */
+window.__seek = function (state) {
+  const s = state || {};
+  const scene = s.scene || 'title';
+
+  if (scene === 'big') {
+    showLayer('s-big');
+    $('bigText').innerHTML = '<span class="bigInner">' + (s.big || '') + '</span>';
+    return;
+  }
+  if (scene === 'end') {
+    showLayer('s-end');
+    return;
+  }
+  if (scene === 'app') {
+    showLayer('s-app');
+    $('appCap').style.opacity = String(s.cap || 0);
+    const glow = s.glow === undefined ? 0 : s.glow;
+    $('pillGlow').style.opacity = String(glow);
+    $('pillGlow').style.display = glow > 0 ? 'block' : 'none';
+    $('pillGlow').style.transform = 'scale(' + (0.96 + glow * 0.06) + ')';
+    return;
+  }
+  if (scene === 'panel') {
+    showLayer('s-panel');
+    const clean = s.clean === true;
+    const breakAt = s.breakAt === undefined || s.breakAt === null ? null : s.breakAt;
+    const feet = s.feet || 0;
+    renderRows(feet, breakAt, clean, s.rowP === undefined ? 1 : s.rowP);
+    const broke = breakAt !== null && feet >= breakAt;
+    $('panelDot').style.background = broke ? 'var(--bad)' : 'var(--good)';
+    $('panelTitle').textContent = broke
+      ? '自检中止 · 第 ' + breakAt + ' 脚断裂'
+      : (clean && feet >= 6 ? '自检完成 · 6 脚全部通过' : '制动系统自检 · 6 脚全力制动测试');
+    $('panelCard').classList.toggle('flash', s.flash === true);
+    return;
+  }
+  if (scene === 'modal') {
+    showLayer('s-modal');
+    const p = s.p === undefined ? 1 : s.p;
+    const clean = s.clean === true;
+    $('modalBack').style.opacity = String(p);
+    $('modalCard').style.opacity = String(p);
+    $('modalCard').style.transform = 'translateY(' + ((1 - p) * 60) + 'px)';
+    $('modalTitle').textContent = clean
+      ? '自检完成 · 6 脚全部通过'
+      : '第 3 脚全力制动时，踏板支架发生结构分离';
+    $('modalStat').innerHTML = (clean ? STAT_CLEAN : STAT_BROKEN).map((r) =>
+      '<span class="k">' + r[0] + '</span><span></span>' +
+      '<span class="v' + (r[2] ? ' bad' : '') + '">' + r[1] + '</span>').join('');
+    $('modalKeep').textContent = clean ? '好，继续开' : '继续运行';
+    $('modalStop').style.display = clean ? 'none' : '';
+    const hl = s.hl || null;
+    $('modalBadge').classList.toggle('hl', hl === 'badge');
+    $('modalStat').classList.toggle('hl', hl === 'data');
+    $('modalNote').classList.toggle('hl', hl === 'derived');
+    return;
+  }
+  showLayer('s-title');
+};
+
+// 首帧：先给个标题，避免渲染器连上时页面是空的
+window.__seek({ scene: 'title' });
+</script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+{
+  "name": "dsh-brake-pedal",
+  "version": "0.1.0",
+  "description": "制动踏板自检彩蛋：给长任务一场『6 脚全力制动测试』，支架随机断在第 2–6 脚（约 1/8 不裂），弹出一份虚构通报。纯表演，从不拦截真实停止动作；界面自带虚构声明，不指向任何真实厂商。",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./client/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/",
+    "client/",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "dsh": {
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-locale"
+      ],
+      "platform": "web"
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh-plugin",
+    "easter-egg",
+    "parody"
+  ],
+  "license": "MIT"
+}
