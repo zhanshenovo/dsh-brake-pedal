@@ -71,6 +71,17 @@ BREAK_ODDS = [0.12, 0.26, 0.24, 0.16, 0.10, 0.12]
 
 ## 安装
 
+三种方式，任选一种。**装完都必须重启 DeepSeek Harness**（插件页的「重启」按钮，或关掉再打开），再刷新页面。
+
+**① 从 GitHub 装（装的是整个仓库，含视频工具链）**
+在 DSH 的「插件 → 添加插件」里输入：
+
+```
+github:zhanshenovo/dsh-brake-pedal
+```
+
+**② 克隆后本地装**
+
 ```bash
 git clone https://github.com/zhanshenovo/dsh-brake-pedal.git
 cd dsh-brake-pedal
@@ -78,11 +89,22 @@ node tools/install.mjs              # 装进 desktop profile
 node tools/install.mjs --profile web
 ```
 
-做三件事（和市场安装一致）：`dependencies` 加 `link:<本包>`、`dsh.profile.bundles`
+它做三件事（和市场安装一致）：`dependencies` 加 `link:<本包>`、`dsh.profile.bundles`
 加包名、`node_modules` 建 junction。改 `package.json` 前备份成
 `package.json.bak-brake-pedal`。脚本按自身位置解析路径，所以克隆到哪都行。
 
-**然后必须重启 DeepSeek Harness**（插件页的「重启」按钮，或关掉再打开），再刷新页面。
+**③ 本地 tarball（GitHub 连不上时用）**
+
+从 [Releases](https://github.com/zhanshenovo/dsh-brake-pedal/releases) 下载
+`dsh-brake-pedal-0.1.0.tgz`（21 KB，只有运行时文件），在「添加插件」里填它的**绝对路径**：
+
+```
+D:\Downloads\dsh-brake-pedal-0.1.0.tgz
+```
+
+> 为什么需要第 ③ 条：插件市场的文档明确写了，镜像只代理 registry 包与依赖，
+> **不代理 GitHub 仓库本身** —— 所以大陆网络下 `github:` 那条路可能连不上，
+> 而切换 npmmirror 也救不了它。
 
 ## 卸载
 

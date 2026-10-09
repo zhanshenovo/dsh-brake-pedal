@@ -88,6 +88,18 @@ write method.
 
 ## Install
 
+Three ways, pick one. **All of them require restarting DeepSeek Harness** (the Restart
+button on the Plugins page, or quit and reopen), then refreshing the page.
+
+**① From GitHub** (installs the whole repo, including the video toolchain) — type this into
+the **Add plugin** box under Plugins:
+
+```
+github:zhanshenovo/dsh-brake-pedal
+```
+
+**② Clone and install locally**
+
 ```bash
 git clone https://github.com/zhanshenovo/dsh-brake-pedal.git
 cd dsh-brake-pedal
@@ -100,8 +112,19 @@ It does the same three things the plugin market does: adds `link:<this package>`
 `node_modules` junction. `package.json` is backed up to `package.json.bak-brake-pedal`
 first. The script resolves paths from its own location, so the clone can live anywhere.
 
-**Then restart DeepSeek Harness** (the Restart button on the Plugins page, or quit and
-reopen), and refresh the page.
+**③ A local tarball** (for when GitHub is unreachable)
+
+Download `dsh-brake-pedal-0.1.0.tgz` (21 KB, runtime files only) from
+[Releases](https://github.com/zhanshenovo/dsh-brake-pedal/releases) and put its
+**absolute path** into the same box:
+
+```
+D:\Downloads\dsh-brake-pedal-0.1.0.tgz
+```
+
+> Why ③ exists: the plugin market's own documentation states that its mirrors proxy
+> registry packages and dependencies only — **not the GitHub repository itself**. So on a
+> network that cannot reach GitHub, switching to a mirror does not rescue a `github:` spec.
 
 ## Uninstall
 
