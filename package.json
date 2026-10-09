@@ -13,7 +13,10 @@
     "lib/",
     "client/",
     "cordis.patch.yml",
-    "README.md"
+    "README.md",
+    "README.en.md",
+    "LICENSE",
+    "NOTICE.md"
   ],
   "dsh": {
     "client": {
